@@ -1,8 +1,11 @@
 #pragma once
 
-#include <sdfg/serializer/json_serializer.h>
+#include <string>
 
 #include "sdfg/einsum/einsum_node.h"
+#include "sdfg/serializer/json_serializer.h"
+#include "sdfg/serializer/library_node_serializer_registry.h"
+#include "sdfg/symbolic/symbolic.h"
 
 namespace sdfg {
 namespace einsum {
@@ -14,6 +17,9 @@ namespace einsum {
  * It is registered with the LibraryNodeSerializerRegistry.
  */
 class EinsumSerializer : public serializer::LibraryNodeSerializer {
+   private:
+    std::string expression(const symbolic::Expression& expr);
+
    public:
     virtual nlohmann::json serialize(const sdfg::data_flow::LibraryNode& library_node) override;
 

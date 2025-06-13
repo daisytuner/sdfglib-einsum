@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(sdfglib-einsum VERSION 0.0.1 DESCRIPTION "Einsum plugin for the sdfglib")
+project(sdfglib-einsum VERSION 0.0.1 DESCRIPTION "Einsum Plugin for SDFG library in C++")
 include(GNUInstallDirs)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -21,7 +21,14 @@ target_include_directories(sdfglib-einsum
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_compile_options(sdfglib-einsum PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -Wno-unused-private-field -Wno-switch -Wno-deprecated-declarations)
-target_link_libraries(sdfglib-einsum PUBLIC sdfglib)
+if(SDFGLIB_PATH)
+    get_filename_component(SDFGLIB_ABS_PATH ${SDFGLIB_PATH} REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    target_include_directories(sdfglib-einsum PUBLIC ${SDFGLIB_ABS_PATH}/include)
+    target_include_directories(sdfglib-einsum PUBLIC ${SDFGLIB_ABS_PATH}/3rdParty/symengine)
+    target_link_libraries(sdfglib-einsum PUBLIC ${SDFGLIB_ABS_PATH}/libsdfglib.a ${SDFGLIB_ABS_PATH}/3rdParty/symengine/symengine/libsymengine.a -lgmp -lisl)
+else()
+    target_link_libraries(sdfglib-einsum PUBLIC sdfglib)
+endif()
 set_target_properties(sdfglib-einsum PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}

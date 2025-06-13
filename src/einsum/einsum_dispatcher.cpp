@@ -1,7 +1,41 @@
 #include "sdfg/einsum/einsum_dispatcher.h"
 
+#include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "sdfg/codegen/language_extension.h"
+#include "sdfg/codegen/utils.h"
+#include "sdfg/data_flow/access_node.h"
+#include "sdfg/data_flow/data_flow_graph.h"
+#include "sdfg/data_flow/library_node.h"
+#include "sdfg/data_flow/memlet.h"
+#include "sdfg/function.h"
+#include "sdfg/symbolic/symbolic.h"
+#include "sdfg/types/type.h"
+#include "sdfg/types/utils.h"
+
 namespace sdfg {
 namespace einsum {
+
+std::string EinsumDispatcher::containerSubset(const std::string& container,
+                                              const std::vector<std::string>& indices) const {
+    std::stringstream stream;
+
+    if (indices.size() > 0) {
+        stream << container;
+        for (auto& index : indices) {
+            stream << "[" << index << "]";
+        }
+    } else {
+        stream << "*" << container;
+    }
+
+    return stream.str();
+}
 
 EinsumDispatcher::EinsumDispatcher(codegen::LanguageExtension& language_extension,
                                    const Function& function,
@@ -38,7 +72,59 @@ void EinsumDispatcher::dispatch(codegen::PrettyPrinter& stream) {
 
     stream << std::endl;
 
-    // TODO: Einsum code goes here
+    const EinsumNode* einsum_node = dynamic_cast<const EinsumNode*>(&this->node_);
+    size_t nested = 0;
+
+    // Create outer maps as for loops
+    for (std::string out_index : einsum_node->out_indices()) {
+        for (const std::pair<symbolic::Symbol, symbolic::Expression>& map : einsum_node->maps()) {
+            if (map.first->get_name() != out_index) continue;
+            stream << "for (" << map.first->get_name() << " = 0; " << map.first->get_name() << " < "
+                   << this->language_extension_.expression(map.second) << "; "
+                   << map.first->get_name() << "++)" << std::endl
+                   << "{" << std::endl;
+            stream.setIndent(stream.indent() + 4);
+            ++nested;
+        }
+    }
+
+    // Set out container entry to 0
+    stream << this->containerSubset(einsum_node->output(0), einsum_node->out_indices()) << " = ";
+    auto& memlet = *this->data_flow_graph_.out_edges(this->node_).begin();
+    auto& out_container_type = types::infer_type(
+        this->function_,
+        this->function_.type(dynamic_cast<const data_flow::AccessNode&>(memlet.dst()).data()),
+        memlet.subset());
+    stream << this->language_extension_.zero(out_container_type.primitive_type()) << ";"
+           << std::endl;
+
+    // Create inner maps as for loops
+    for (const std::pair<symbolic::Symbol, symbolic::Expression>& map : einsum_node->maps()) {
+        if (std::find(einsum_node->out_indices().begin(), einsum_node->out_indices().end(),
+                      map.first->get_name()) != einsum_node->out_indices().end())
+            continue;
+        stream << "for (" << map.first->get_name() << " = 0; " << map.first->get_name() << " < "
+               << this->language_extension_.expression(map.second) << "; " << map.first->get_name()
+               << "++)" << std::endl
+               << "{" << std::endl;
+        stream.setIndent(stream.indent() + 4);
+        ++nested;
+    }
+
+    // Calculate one entry
+    stream << this->containerSubset(einsum_node->output(0), einsum_node->out_indices()) << " = "
+           << this->containerSubset(einsum_node->output(0), einsum_node->out_indices()) << " + ";
+    for (size_t i = 0; i < einsum_node->inputs().size(); ++i) {
+        if (i > 0) stream << " * ";
+        stream << this->containerSubset(einsum_node->input(i), einsum_node->in_indices(i));
+    }
+    stream << ";" << std::endl;
+
+    // Closing brackets
+    for (size_t i = 0; i < nested; ++i) {
+        stream.setIndent(stream.indent() - 4);
+        stream << "}" << std::endl;
+    }
 
     stream << std::endl;
 

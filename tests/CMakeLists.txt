@@ -7,6 +7,8 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 set(TEST_FILES
+    einsum/einsum_dispatcher_test.cpp
+    einsum/einsum_node_test.cpp
     test.cpp
 )
 
