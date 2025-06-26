@@ -7,6 +7,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(NOT TARGET sdfglib::sdfglib)
+    find_package(sdfglib CONFIG REQUIRED)
+endif()
+
 set(SOURCE_FILES
     src/einsum/einsum_node.cpp
     src/einsum/einsum_serializer.cpp
@@ -21,13 +25,8 @@ target_include_directories(sdfglib-einsum
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_compile_options(sdfglib-einsum PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -Wno-unused-private-field -Wno-switch -Wno-deprecated-declarations)
-if(SDFGLIB_PATH)
-    get_filename_component(SDFGLIB_ABS_PATH ${SDFGLIB_PATH} REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
-    target_include_directories(sdfglib-einsum PUBLIC ${SDFGLIB_ABS_PATH}/include)
-    target_link_libraries(sdfglib-einsum PUBLIC ${SDFGLIB_ABS_PATH}/lib/libsdfglib.a ${SDFGLIB_ABS_PATH}/lib/libsymengine.a -lgmp -lisl)
-else()
-    target_link_libraries(sdfglib-einsum PUBLIC sdfglib)
-endif()
+target_link_libraries(sdfglib-einsum PUBLIC sdfglib::sdfglib)
+
 set_target_properties(sdfglib-einsum PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}

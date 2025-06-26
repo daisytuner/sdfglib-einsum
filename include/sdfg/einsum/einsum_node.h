@@ -61,6 +61,8 @@ class EinsumNode : public data_flow::LibraryNode {
         size_t element_id, const graph::Vertex vertex,
         data_flow::DataFlowGraph& parent) const override;
 
+    virtual symbolic::SymbolSet symbols() const override;
+
     virtual void replace(const symbolic::Expression& old_expression,
                          const symbolic::Expression& new_expression) override;
 

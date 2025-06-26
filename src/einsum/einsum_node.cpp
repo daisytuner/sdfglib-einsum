@@ -109,6 +109,11 @@ std::unique_ptr<data_flow::DataFlowNode> EinsumNode::clone(size_t element_id,
         this->inputs(), this->side_effect(), this->maps(), this->out_indices(), this->in_indices());
 }
 
+symbolic::SymbolSet EinsumNode::symbols() const {
+    // TODO: Implement
+    return {};
+}
+
 void EinsumNode::replace(const symbolic::Expression& old_expression,
                          const symbolic::Expression& new_expression) {
     // Do nothing
